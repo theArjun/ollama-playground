@@ -124,6 +124,12 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 	// Populate the model select options from the window.MODEL_LIST
 	let models = await fetchModels();
+	// If models are empty, add an alert to the user and exit
+	if (models.length === 0) {
+		alert("No models found. Please check your Ollama installation.");
+		return;
+	}
+
 	models.forEach((model) => {
 		const option = document.createElement("option");
 		option.value = model;
