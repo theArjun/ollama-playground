@@ -90,13 +90,46 @@ async function handleSubmit(e) {
 	});
 
 	// Try to call Tauri backend if available
-	invoke("chat_to_llm", { messages: window.MESSAGES, model: selectedModel })
-		.then((response) => {
-			addMessage(response.message, false);
-			window.MESSAGES.push({
-				role: "assistant",
-				content: response.message,
-			});
+	let fullResponse = "";
+	let responseMessage = null;
+
+	// Create a channel for streaming responses
+	const { Channel } = window.__TAURI__.core;
+	const onStream = new Channel();
+
+	// Handle streaming data
+	onStream.onmessage = (chunk) => {
+		if (chunk.message) {
+			fullResponse += chunk.message;
+
+			// Update the message in real-time or create it if it doesn't exist
+			if (!responseMessage) {
+				responseMessage = addMessage("", false);
+			}
+
+			// Update the message content
+			const messageContent = responseMessage.querySelector('p');
+			if (messageContent) {
+				messageContent.textContent = fullResponse;
+			}
+		}
+	};
+
+	invoke("chat_to_llm", {
+		request: {
+			model: selectedModel,
+			messages: window.MESSAGES,
+		},
+		onStream: onStream
+	})
+		.then(() => {
+			// Stream completed successfully
+			if (fullResponse) {
+				window.MESSAGES.push({
+					role: "assistant",
+					content: fullResponse,
+				});
+			}
 		})
 		.catch((error) => {
 			// Fallback to static response if Tauri command is not available
@@ -104,6 +137,7 @@ async function handleSubmit(e) {
 			const errorResponse = getErrorResponse();
 			addMessage(`[${selectedModel}] ${errorResponse}`, false);
 		});
+
 
 	// Re-enable send button and input
 	sendButton.disabled = false;
