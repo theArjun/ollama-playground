@@ -110,7 +110,9 @@ async function handleSubmit(e) {
 			// Update the message content
 			const messageContent = responseMessage.querySelector('p');
 			if (messageContent) {
-				messageContent.textContent = fullResponse;
+				const converter = new showdown.Converter();
+				const htmlContent = converter.makeHtml(fullResponse);
+				messageContent.innerHTML = htmlContent;
 			}
 		}
 	};
